@@ -1,0 +1,220 @@
+<html>
+    <head>
+		<title> </title>
+		
+		<script src="https://pagecdn.io/lib/mathjs/11.0.1/math.js" crossorigin="anonymous"  ></script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+	</head>
+    <body>
+		<script src="node.js"></script>
+		<script src="dof.js"></script>
+		<script src="member.js"></script>
+		<script src="load.js"></script>
+		<script src="support.js"></script>
+		<script src="structure.js"></script>
+		
+        <div>
+		
+			<canvas id="deflectionChart" width="200" height="50"></canvas>
+			<canvas id="momentChart" width="200" height="50"></canvas>
+			<canvas id="shearChart" width="200" height="50"></canvas>
+			
+        </div>
+		
+		
+		<script>
+
+			
+			let structure = new Structure();
+			
+			let i = 0;
+			while (i <= 80) {
+				let node = new Node(i);
+				structure.addNode(node);
+				i++; 
+			}
+			
+			i = 0; 
+			while (i < structure.nodes.length - 1) {
+				let member = new Member(structure.nodes[i], structure.nodes[i+1]);
+				structure.addMember(member);
+				i++;
+			}
+			
+			structure.addSupport(structure.nodes[0]);
+			structure.addSupport(structure.nodes[40]);
+			structure.addSupport(structure.nodes[80]);
+			
+			
+			<!-- structure.addLoad(structure.nodes[10], -1); -->
+			<!-- structure.addLoad(structure.nodes[0], -1); -->
+			
+			structure.solveDeflections();
+			structure.solveMomentsAndShears();
+			
+			
+			
+			<!-- Deflection Chart -->
+			
+			let deflectionCoordinates = [];
+			structure.nodes.forEach( node => {
+				deflectionCoordinates.push({x: node.coord, y: node.yDOF.displacement});
+			});
+			let yMinDeflection = -1;
+			let yMaxDeflection = 1;
+			
+			const deflectionData = {
+				datasets: [{
+					label: 'Deflection',
+					data: deflectionCoordinates, 
+					backgroundColor: 'rgb(255,99, 132)',
+					showLine: true
+				}]
+			};
+			
+			const deflectionConfig = {
+				type: 'scatter',
+				data: deflectionData,
+				options: {
+					scales: {
+						x: {type: 'linear', position: 'bottom'},
+						y: {min: yMinDeflection, max: yMaxDeflection}
+					},
+					animation: false
+				}
+			};
+			
+			const deflectionChart = new Chart(
+				document.getElementById('deflectionChart'),
+				deflectionConfig
+			);
+			
+			<!-- Moment Chart -->
+			
+			let momentCoordinates = [];
+			let shearCoordinates = [];
+			structure.members.forEach( (member, idx) => {
+				momentCoordinates.push({x: member.nearNode.coord, y: -1 * member.beginMoment});
+				momentCoordinates.push({x: member.farNode.coord, y: member.endMoment});
+				shearCoordinates.push({x: member.nearNode.coord, y: -1 * member.beginShear});
+				shearCoordinates.push({x: member.farNode.coord, y: member.endShear});
+			});
+			let yMinMoment = -1;
+			let yMaxMoment = 1;
+			
+			const momentData = {
+				datasets: [{
+					label: 'Moment',
+					data: momentCoordinates, 
+					backgroundColor: 'rgb(0, 206, 209)',
+					showLine: true
+				}]
+			};
+			
+			const momentConfig = {
+				type: 'scatter',
+				data: momentData,
+				options: {
+					scales: {
+						x: {type: 'linear', position: 'bottom'},
+						y: {min: yMinMoment, max: yMaxMoment}
+					},
+					animation: false
+				}
+			};
+			
+			const momentChart = new Chart(
+				document.getElementById('momentChart'),
+				momentConfig
+			);
+			
+			
+			<!-- Shear Chart -->
+			let yMinShear = -1;
+			let yMaxShear = 1;
+			
+			const shearData = {
+				datasets: [{
+					label: 'Shear',
+					data: shearCoordinates, 
+					backgroundColor: 'rgb(255,99, 132)',
+					showLine: true
+				}]
+			};
+			
+			const shearConfig = {
+				type: 'scatter',
+				data: shearData,
+				options: {
+					scales: {
+						x: {
+							type: 'linear',
+							position: 'bottom'
+						}
+					},
+					animation: false
+				}
+			};
+			
+			const shearChart = new Chart(
+				document.getElementById('shearChart'),
+				shearConfig
+			);
+			
+			
+			let position = 0;
+			let coord_array_idx = 0;
+			
+			let movingLoadInterval = setInterval(function () {
+				structure.removeAllLoads();
+				structure.addLoad(structure.nodes[position], -1);
+				
+				structure.solveDeflections();
+				structure.solveMomentsAndShears();
+				
+				
+				structure.nodes.forEach( (node, idx) => {
+					deflectionCoordinates[idx] = ({x: node.coord, y: node.yDOF.displacement});
+					if (node.yDOF.displacement > yMaxDeflection) {yMaxDeflection = node.yDOF.displacement;}
+					if (node.yDOF.displacement < yMinDeflection) {yMinDeflection = node.yDOF.displacement;}
+					deflectionChart.options.scales.y = {min: yMinDeflection, max: yMaxDeflection};
+				});
+				
+				coord_array_idx = 0;
+				structure.members.forEach( (member) => {
+					momentCoordinates[coord_array_idx] = ({x: member.nearNode.coord, y: -1 * member.beginMoment});
+					momentCoordinates[coord_array_idx + 1] = ({x: member.farNode.coord, y: member.endMoment});
+					if (member.endMoment > yMaxMoment) {yMaxMoment = member.endMoment;}
+					if (member.endMoment < yMinMoment) {yMinMoment = member.endMoment;}
+					momentChart.options.scales.y = {min: yMinMoment, max: yMaxMoment};
+					
+					shearCoordinates[coord_array_idx] = ({x: member.nearNode.coord, y: -1 * member.beginShear});
+					shearCoordinates[coord_array_idx + 1] = ({x: member.farNode.coord, y: member.endShear});
+					if (member.endShear > yMaxShear) {yMaxShear = member.endShear;}
+					if (member.endShear < yMinShear) {yMinShear = member.endShear;}
+					shearChart.options.scales.y = {min: yMinShear, max: yMaxShear};
+					
+					coord_array_idx += 2;
+				});
+				
+				deflectionChart.update();
+				momentChart.update();
+				shearChart.update();
+				
+				position++;
+				if (position > structure.nodes[structure.nodes.length - 1].coord) {stopInterval();}
+			
+			}, 100);
+			
+			function stopInterval() {
+				clearInterval(movingLoadInterval);
+			}
+			
+
+			
+			
+			
+			
+		</script>
+    </body>
+</html>
