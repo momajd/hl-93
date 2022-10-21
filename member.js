@@ -9,11 +9,17 @@ class Member {
 		this.beginMoment = undefined;
 		this.endShear = undefined;
 		this.endMoment = undefined; 
+		
+		// fixed end moments
+		this.femMomentA = 0;
+		this.femMomentB = 0;
+		this.femShearA = 0;
+		this.femShearB = 0;
 	}
 	
 	calculateMemberMatrix() {
 		this.matrix = math.zeros(4, 4);
-		let test = 1000;
+		
 		this.matrix.set([0, 0], 12/math.pow(this.length, 3) * this.EI );
 		this.matrix.set([0, 1], 6/math.pow(this.length, 2) * this.EI );
 		this.matrix.set([0, 2], -12/math.pow(this.length, 3) * this.EI );
@@ -33,5 +39,12 @@ class Member {
 		this.matrix.set([3, 1], 2/this.length * this.EI );
 		this.matrix.set([3, 2], -6/math.pow(this.length, 2) * this.EI );
 		this.matrix.set([3, 3], 4/this.length * this.EI);
+	}
+	
+	resetFixedEndMoments() {
+		this.femMomentA = 0;
+		this.femMomentB = 0;
+		this.femShearA = 0;
+		this.femShearB = 0;
 	}
 }

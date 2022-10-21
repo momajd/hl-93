@@ -6,62 +6,143 @@
 		<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 	</head>
     <body>
-		<script src="node.js"></script>
-		<script src="dof.js"></script>
-		<script src="member.js"></script>
-		<script src="load.js"></script>
-		<script src="support.js"></script>
 		<script src="structure.js"></script>
+		<script src="structureView.js"></script>
+		<script src="node.js"></script>
+		<script src="member.js"></script>
+		<script src="support.js"></script>
+		<script src="dof.js"></script>
+		<script src="nodalLoad.js"></script>
+		<script src="globalLoad.js"></script>
 		
         <div>
 		
-			<canvas id="deflectionChart" width="200" height="50"></canvas>
-			<canvas id="momentChart" width="200" height="50"></canvas>
-			<canvas id="shearChart" width="200" height="50"></canvas>
+			
+			<label> Number of Spans </label>
+			<input id="numSpans" type="number" min="1" max="5" value="1" onclick="updateNumberOfSpans()"></input>
+			
+			<div id="span1Div">
+				<label> Span 1 </label>
+				<input id="span1" type="number" min="0" value="100" oninput="updateSpanLengths()"></input>
+			</div>
+			
+			<div id="span2Div" style="display:none">
+				<label> Span 2 </label>
+				<input id="span2" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
+			</div>
+			
+			<div id="span3Div" style="display:none">
+				<label> Span 3 </label>
+				<input id="span3" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
+			</div>
+			
+			<div id="span4Div" style="display:none">
+				<label> Span 4 </label>
+				<input id="span4" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
+			</div>
+			
+			<div id="span5Div" style="display:none">
+				<label> Span 5 </label>
+				<input id="span5" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
+			</div>
+			
+		</div>
+		
+		<div>
+			<button onclick="runHL93()"> run HL93 </button>
+		</div>
+		
+		<div>
+			
+			<canvas id="canvas" width="1000" height="400"></canvas>
+			<canvas id="deflectionChart" ></canvas>
+			<canvas id="momentChart" ></canvas>
+			<canvas id="shearChart" ></canvas>
 			
         </div>
 		
 		
 		<script>
+		
+		
+			<!-- Initial Structure -->
+			let structure = new Structure();
+			structure.constructStructureFromSpans([100]);
+			
+			let load = new GlobalLoad(50, -1);
+			structure.addGlobalLoad(load);
+				
+			structure.solve();
+			
+			let canvas = document.getElementById("canvas");
+			let context = canvas.getContext("2d"); 
+			context.translate(25, 80);
+			
+			let structureView = new StructureView(context, structure);
+			
+			
+			
+			<!-- UI Functions -->
+			
+			function updateNumberOfSpans() {
+				let numSpans = parseInt(document.getElementById("numSpans").value);
+				if (structureView.spanCounter === 5 && numSpans === 5) {alert("Max number of spans allowed is 5")};
+				structureView.spanCounter = numSpans;
+				
+				for (let i = 1; i <= 5; i++) {
+					let element = document.getElementById(`span${i}Div`);
+					
+					if (i <= numSpans) {
+						element.style.display = "block";
+					} else {
+						document.getElementById(`span${i}`).value = 0;
+						element.style.display = "none";
+					}
+				}
+				
+				updateSpanLengths();
+			}
+			
+			function updateSpanLengths() {
+				let spanArray = [];
+				
+				for (let i = 1; i <= 5; i++) {
+					let spanLength = parseInt(document.getElementById(`span${i}`).value);
+					if (spanLength > 0) { spanArray.push(spanLength) };
+				}
+				
+				structure.constructStructureFromSpans(spanArray);
+				structureView.redraw();
+				// TODO - update charts
+			}
 
 			
-			let structure = new Structure();
-			
-			let i = 0;
-			while (i <= 80) {
-				let node = new Node(i);
-				structure.addNode(node);
-				i++; 
-			}
-			
-			i = 0; 
-			while (i < structure.nodes.length - 1) {
-				let member = new Member(structure.nodes[i], structure.nodes[i+1]);
-				structure.addMember(member);
-				i++;
-			}
-			
-			structure.addSupport(structure.nodes[0]);
-			structure.addSupport(structure.nodes[40]);
-			structure.addSupport(structure.nodes[80]);
 			
 			
-			<!-- structure.addLoad(structure.nodes[10], -1); -->
-			<!-- structure.addLoad(structure.nodes[0], -1); -->
-			
-			structure.solveDeflections();
-			structure.solveMomentsAndShears();
 			
 			
+			<!-- Initial Charts Coords.. all will be 0 -->
+			
+			let momentCoordinates = [];
+			let shearCoordinates = [];
+			let deflectionCoordinates = [];
+			structure.members.forEach( (member, idx) => {
+				momentCoordinates.push({x: member.nearNode.coord, y: -1 * member.beginMoment});
+				momentCoordinates.push({x: member.farNode.coord, y: member.endMoment});
+				shearCoordinates.push({x: member.nearNode.coord, y: member.beginShear});
+				shearCoordinates.push({x: member.farNode.coord, y: -1 * member.endShear});
+				deflectionCoordinates.push({x: member.nearNode.coord, y: member.nearNode.yDOF.displacement});
+				deflectionCoordinates.push({x: member.farNode.coord, y: member.farNode.yDOF.displacement});
+			});
+			
+			let yMinDeflection = -1;  // variables used later on for chart updating
+			let yMaxDeflection = 1;
+			let yMinMoment = -1;
+			let yMaxMoment = 1;
+			let yMinShear = -1;
+			let yMaxShear = 1;
 			
 			<!-- Deflection Chart -->
-			
-			let deflectionCoordinates = [];
-			structure.nodes.forEach( node => {
-				deflectionCoordinates.push({x: node.coord, y: node.yDOF.displacement});
-			});
-			let yMinDeflection = -1;
-			let yMaxDeflection = 1;
 			
 			const deflectionData = {
 				datasets: [{
@@ -77,8 +158,7 @@
 				data: deflectionData,
 				options: {
 					scales: {
-						x: {type: 'linear', position: 'bottom'},
-						y: {min: yMinDeflection, max: yMaxDeflection}
+						x: {type: 'linear', position: 'bottom'}
 					},
 					animation: false
 				}
@@ -90,17 +170,6 @@
 			);
 			
 			<!-- Moment Chart -->
-			
-			let momentCoordinates = [];
-			let shearCoordinates = [];
-			structure.members.forEach( (member, idx) => {
-				momentCoordinates.push({x: member.nearNode.coord, y: -1 * member.beginMoment});
-				momentCoordinates.push({x: member.farNode.coord, y: member.endMoment});
-				shearCoordinates.push({x: member.nearNode.coord, y: -1 * member.beginShear});
-				shearCoordinates.push({x: member.farNode.coord, y: member.endShear});
-			});
-			let yMinMoment = -1;
-			let yMaxMoment = 1;
 			
 			const momentData = {
 				datasets: [{
@@ -116,8 +185,7 @@
 				data: momentData,
 				options: {
 					scales: {
-						x: {type: 'linear', position: 'bottom'},
-						y: {min: yMinMoment, max: yMaxMoment}
+						x: {type: 'linear', position: 'bottom'}
 					},
 					animation: false
 				}
@@ -130,8 +198,6 @@
 			
 			
 			<!-- Shear Chart -->
-			let yMinShear = -1;
-			let yMaxShear = 1;
 			
 			const shearData = {
 				datasets: [{
@@ -147,10 +213,7 @@
 				data: shearData,
 				options: {
 					scales: {
-						x: {
-							type: 'linear',
-							position: 'bottom'
-						}
+						x: {type: 'linear', position: 'bottom'}
 					},
 					animation: false
 				}
@@ -161,35 +224,26 @@
 				shearConfig
 			);
 			
+			<!-- Chart Functions -->
 			
-			let position = 0;
-			let coord_array_idx = 0;
-			
-			let movingLoadInterval = setInterval(function () {
-				structure.removeAllLoads();
-				structure.addLoad(structure.nodes[position], -1);
+			function updateCharts() {
 				
-				structure.solveDeflections();
-				structure.solveMomentsAndShears();
-				
-				
-				structure.nodes.forEach( (node, idx) => {
-					deflectionCoordinates[idx] = ({x: node.coord, y: node.yDOF.displacement});
-					if (node.yDOF.displacement > yMaxDeflection) {yMaxDeflection = node.yDOF.displacement;}
-					if (node.yDOF.displacement < yMinDeflection) {yMinDeflection = node.yDOF.displacement;}
+				let coord_array_idx = 0;
+				structure.members.forEach (member => {
+					deflectionCoordinates[coord_array_idx] = {x: member.nearNode.coord, y: member.nearNode.yDOF.displacement};
+					deflectionCoordinates[coord_array_idx + 1] = {x: member.farNode.coord, y: member.farNode.yDOF.displacement};
+					if (member.farNode.yDOF.displacement < yMinDeflection) {yMinDeflection = member.farNode.yDOF.displacement};
+					if (member.farNode.yDOF.displacement > yMaxDeflection) {yMaxDeflection = member.farNode.yDOF.displacement};
 					deflectionChart.options.scales.y = {min: yMinDeflection, max: yMaxDeflection};
-				});
-				
-				coord_array_idx = 0;
-				structure.members.forEach( (member) => {
-					momentCoordinates[coord_array_idx] = ({x: member.nearNode.coord, y: -1 * member.beginMoment});
-					momentCoordinates[coord_array_idx + 1] = ({x: member.farNode.coord, y: member.endMoment});
-					if (member.endMoment > yMaxMoment) {yMaxMoment = member.endMoment;}
-					if (member.endMoment < yMinMoment) {yMinMoment = member.endMoment;}
+					
+					momentCoordinates[coord_array_idx] = {x: member.nearNode.coord, y: -1 * member.beginMoment};
+					momentCoordinates[coord_array_idx + 1] = {x: member.farNode.coord, y: member.endMoment};
+					if (member.endMoment > yMaxMoment) {yMaxMoment = member.endMoment};
+					if (member.endMoment < yMinMoment) {yMinMoment = member.endMoment};
 					momentChart.options.scales.y = {min: yMinMoment, max: yMaxMoment};
 					
-					shearCoordinates[coord_array_idx] = ({x: member.nearNode.coord, y: -1 * member.beginShear});
-					shearCoordinates[coord_array_idx + 1] = ({x: member.farNode.coord, y: member.endShear});
+					shearCoordinates[coord_array_idx] = {x: member.nearNode.coord, y: -1 * member.beginShear};
+					shearCoordinates[coord_array_idx + 1] = {x: member.farNode.coord, y: member.endShear};
 					if (member.endShear > yMaxShear) {yMaxShear = member.endShear;}
 					if (member.endShear < yMinShear) {yMinShear = member.endShear;}
 					shearChart.options.scales.y = {min: yMinShear, max: yMaxShear};
@@ -200,17 +254,47 @@
 				deflectionChart.update();
 				momentChart.update();
 				shearChart.update();
-				
-				position++;
-				if (position > structure.nodes[structure.nodes.length - 1].coord) {stopInterval();}
-			
-			}, 100);
-			
-			function stopInterval() {
-				clearInterval(movingLoadInterval);
 			}
 			
-
+			function resetCharts() {
+				//TODO
+			}
+			
+			
+			<!-- Moving Loads -->
+			
+			function runHL93() {
+				structure.removeAllLoads();
+				
+				let axle1 = new GlobalLoad(0, -8);
+				let axle2 = new GlobalLoad(-14, -32);
+				let axle3 = new GlobalLoad(-28, -32);
+				[axle1, axle2, axle3].forEach(axle => structure.addGlobalLoad(axle));
+				
+				let stepDistance = 2;
+				let rearAxleInterval = 8;  // can be adjusted but 4 is a good interval for the rear spacing
+				
+				let hl93Interval = setInterval(function () {
+					
+					if (axle2.coord - axle3.coord < 30 && axle3.coord > 0) {
+						axle3.setCoord(axle3.coord - rearAxleInterval);
+					} else {
+						axle3.setCoord(axle2.coord - 14);
+						structure.stepLoads(stepDistance);
+					}
+					
+					structure.solve();
+					structureView.redraw();
+					updateCharts();
+					
+					if (axle3.coord > structure.length) {stopHL93Interval()};
+					
+				},100);
+				
+				function stopHL93Interval() {
+					clearInterval(hl93Interval);
+				}
+			}
 			
 			
 			
