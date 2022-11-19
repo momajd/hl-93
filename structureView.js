@@ -2,19 +2,27 @@ class StructureView {
 	constructor(context, structure) {
 		this.context = context;
 		this.structure = structure;
-		this.spanCounter = 1;
-		
+		this.spanCounter = 3;
 		this.structureHeight = 8;  
 		
+		this.translateCanvas();
 		this.redraw();
 	}
 	
 	scale () {
-		return 0.9 * this.context.canvas.width / this.structure.length;
+		return 0.6 * this.context.canvas.width / this.structure.length;
 	}
 	
 	structureWidth () {
 		return this.structure.length * this.scale();
+	}
+	
+	translateCanvas () {
+		// position the structure in the middle of the canvas
+		let canvasWidth = this.context.canvas.width;
+		this.xOffset = (canvasWidth - this.structureWidth() ) / 2;  // define instance var since this value will be used to clear canvas
+		this.yOffset = 100;   // based on visual preference 
+		this.context.translate(this.xOffset, this.yOffset);
 	}
 	
 	updateSpanCount (numSpans) {
@@ -28,9 +36,9 @@ class StructureView {
 	
 	drawSupports() {
 		this.structure.supports.forEach( support => {
-			let x = support.coord() * this.scale() - 10;
+			let x = support.coord() * this.scale() - 7.5;
 			let y = this.structureHeight + 2;
-			
+				
 			this.context.fillStyle = "grey";
 			this.context.fillRect(x, y, 15, 20);
 		});
@@ -68,9 +76,61 @@ class StructureView {
 		});
 	}
 	
+	drawReactions() {
+		this.structure.supports.forEach (support => {
+			let ctx = this.context;
+			let x = support.coord() * this.scale();
+			let y = this.structureHeight + 25; // 20 is height that support is drawn
+			ctx.fillStyle = "rgba(0, 0, 200, 0.5)";
+			ctx.strokeStyle = "rgba(0, 0, 200, 0.5)";
+			
+			if (support.reaction > 0) { 
+				//draw arrow
+				ctx.beginPath();
+				ctx.moveTo(x, y);
+				ctx.lineTo(x + 6, y + 12);
+				ctx.lineTo(x - 6, y + 12);
+				ctx.fill();
+				
+				ctx.beginPath();
+				ctx.moveTo(x, y + 12);
+				ctx.lineTo(x, y + 12 + support.reaction);
+				ctx.closePath();
+				ctx.stroke();
+				
+				//text
+				ctx.font= '12px sans-serif';
+				ctx.fillText( `${math.round(support.reaction*100)/100} k`, x + 6, y + 12);
+			} else if (support.reaction < 0) {
+				//draw arrow
+				ctx.beginPath();
+				ctx.moveTo(x, y + 12 - support.reaction);
+				ctx.lineTo(x + 6, y - support.reaction);
+				ctx.lineTo(x - 6, y - support.reaction);
+				ctx.fill();
+				
+				ctx.beginPath();
+				ctx.moveTo(x, y );
+				ctx.lineTo(x, y - support.reaction);
+				ctx.closePath();
+				ctx.stroke();
+				
+				//text
+				ctx.font= '12px sans-serif';
+				ctx.fillText( `${math.round(support.reaction*100)/100} k`, x + 6, y + 12);
+			}
+			
+		});
+	}
+	
+	drawDistributedLoads() {
+		
+	}
+	
 	drawSpanDimensions() {
 		let ctx = this.context;
 		ctx.fillStyle = "black";
+		ctx.strokeStyle = "black";
 		ctx.lineWidth = 0.5;
 		
 		for (let i = 0; i < structure.supports.length - 1; i++) {
@@ -107,24 +167,24 @@ class StructureView {
 			let spanLength = Math.round( (farSupport.coord() - nearSupport.coord() )* 100) / 100;
 			ctx.font = '16px sans-serif';
 			ctx.fillText(`${spanLength} ft`, (x1 + x2)/2 - 20, y - 5);
+			ctx.fillText(`Span ${i + 1}`, (x1 + x2)/2 - 25, y + 20);
 		}
 	}
 	
-	animate() {
-		//TODO - remove if not needed
-	}
 	
 	clearCanvas() {
 		let canvas = this.context.canvas;
-		this.context.clearRect(-25, -80, canvas.width, canvas.height);
+		this.context.clearRect(-this.xOffset, -this.yOffset, canvas.width, canvas.height);
 	}
 	
 	redraw() {
 		this.clearCanvas();
 		this.drawStructure();
 		this.drawSupports();
-		this.drawLoads();
 		this.drawSpanDimensions();
+		this.drawReactions();
+		this.drawLoads();
+		
 	}
 	
 }

@@ -11,10 +11,9 @@ class Structure {
 	}
 	
 	
-	
-	constructStructureFromSpans (spanArray) {
+	constructStructureFromSpans (spanArray, stiffness) {
 		this.clearStructure();
-		let spanDivisions = 20;  // refine structure as needed
+		let spanDivisions = 10;  // refine structure as needed
 		
 		let globalDist = 0;
 		spanArray.forEach(span => {
@@ -24,8 +23,8 @@ class Structure {
 				let node = new Node(globalDist);
 				this.addNode(node);
 				if (spanDist === 0) {this.addSupport(node)};
-				spanDist = Math.round( (spanDist + span/spanDivisions)*10000) /10000; //rounding to deal with floating point precision in JS
-				globalDist = Math.round( (globalDist + span/spanDivisions)*10000) /10000;
+				spanDist = Math.round( (spanDist + span/spanDivisions)*1000) /1000; //rounding to deal with floating point precision in JS
+				globalDist = Math.round( (globalDist + span/spanDivisions)*1000) /1000;
 			}
 		});
 		
@@ -36,12 +35,12 @@ class Structure {
 		for (let i = 0; i < this.nodes.length - 1; i++) {
 			let nearNode = this.nodes[i];
 			let farNode = this.nodes[i + 1];
-			let member = new Member(nearNode, farNode);
+			let member = new Member(nearNode, farNode, stiffness);
 			this.addMember(member);
 		}
 	}
 	
-	clearStructure() {
+	clearStructure() { 
 		this.nodes = [];
 		this.members = [];
 		this.nodalLoads = [];
@@ -98,20 +97,34 @@ class Structure {
 				let a = globalLoad.coord - member.nearNode.coord;
 				let b = member.length - a;
 				
-				member.femMomentA = globalLoad.magnitude * b**2 * a / member.length**2;
-				member.femMomentB = -(globalLoad.magnitude * a**2 * b / member.length**2);
-				member.femShearA = (globalLoad.magnitude * (3*a + b)* b**2 / member.length**3);
-				member.femShearB = (globalLoad.magnitude * (a + 3*b)* a**2 / member.length**3);
-				
-				this.addNodalLoad(member.nearNode.yDOF, member.femShearA);
-				this.addNodalLoad(member.nearNode.zDOF, member.femMomentA);
-				this.addNodalLoad(member.farNode.yDOF, member.femShearB);
-				this.addNodalLoad(member.farNode.zDOF, member.femMomentB);
+				// construct fixed-end-moments unless load is exactly at a node location
+				if (a === 0) {
+					this.addNodalLoad(member.nearNode.yDOF, globalLoad.magnitude); 
+				} else if (b === 0)	{
+					this.addNodalLoad(member.farNode.yDOF, globalLoad.magnitude);
+				} else {
+					member.femMomentA += globalLoad.magnitude * b**2 * a / member.length**2;
+					member.femMomentB += -(globalLoad.magnitude * a**2 * b / member.length**2);
+					member.femShearA += globalLoad.magnitude * (3*a + b)* b**2 / member.length**3;
+					member.femShearB += globalLoad.magnitude * (a + 3*b)* a**2 / member.length**3;
+				}
 			}
 		});
+		
+		this.members.forEach( member => {
+			if (member.femShearA != 0) {this.addNodalLoad(member.nearNode.yDOF, member.femShearA)};
+			if (member.femMomentA != 0) {this.addNodalLoad(member.nearNode.zDOF, member.femMomentA)};
+			if (member.femShearB != 0) {this.addNodalLoad(member.farNode.yDOF, member.femShearB)};
+			if (member.femMomentB !=0) {this.addNodalLoad(member.farNode.zDOF, member.femMomentB)};
+		});
+		
 	}
 	
-	stepLoads (increment) { // TODO need this?
+	createNodalLoadsFromDistributedLoads () {
+		//TODO
+	}
+	
+	stepLoads (increment) { 
 		this.globalLoads.forEach(load => load.stepLoad(increment) );
 	}
 	
@@ -206,7 +219,7 @@ class Structure {
 	}
 	
 	partitionStiffnessMatrix () {
-		if (this.matrix === undefined) {return;}
+		if (this.matrix === undefined) {return}
 		let subsetSize = this.dofs.length - this.supports.length;
 		return this.matrix.subset(math.index(math.range(0, subsetSize), math.range(0, subsetSize)));
 	}
@@ -216,9 +229,9 @@ class Structure {
 		let loadArr = math.zeros(vectorSize);
 		
 		this.nodalLoads.forEach( load => {
-			
 			if (!load.dof.isRestrained) {
-				loadArr.set([load.dof.matrixIndex], load.magnitude);
+				let newLoad = loadArr.get([load.dof.matrixIndex]) + load.magnitude; // need in case there are loads that are applied to the same node
+				loadArr.set([load.dof.matrixIndex], newLoad);
 			}
 		});
 		
@@ -226,17 +239,18 @@ class Structure {
 	}
 	
 	solveDeflections() {
-		if (this.matrix === undefined) {return;}
+		if (this.matrix === undefined) {return}
 		
 		let displacements = math.multiply(this.loadVector(), math.inv(this.partitionStiffnessMatrix()));
 
 		displacements.forEach( (displacement, idx) => {
 			this.dofs[idx].displacement = displacement;
 		});
+		
 	}
 	
 	solveMomentsAndShears() {
-		if (this.matrix === undefined) {return;}
+		if (this.matrix === undefined) {return}
 		
 		this.members.forEach(member => {
 			
@@ -255,6 +269,28 @@ class Structure {
 			member.endMoment = (forces.get([3]) - member.femMomentB);
 			
 		});
+	}
+	
+	solveReactions() {
+		if (this.matrix === undefined) {return}
+		let displacements = this.dofs.map ( dof => dof.displacement );
+		let forces = math.multiply(displacements, structure.matrix);
+		
+		this.supports.forEach( support => {
+			let reaction = forces.get([support.dof.matrixIndex]);
+			let fem1 = support.node.backMember ? support.node.backMember.femShearB : 0; 
+			let fem2 = support.node.aheadMember ? support.node.aheadMember.femShearA : 0;
+			let totalReaction = reaction - fem1 - fem2;
+			
+			// need to account for when a load is directly on top of a support
+			structure.globalLoads.forEach ( load => {
+				if (load.coord === support.coord() ) {totalReaction -= load.magnitude}
+			});
+			
+			support.setReaction(totalReaction);
+		});
+		
+		
 	}
 	
 	solve() {
@@ -278,22 +314,23 @@ class Structure {
 		let time4 = Date.now();
 		// console.log(`solved Moments & Shears ${time4 - time3} milliseconds`);
 		
+		this.solveReactions();
+		let time5 = Date.now();
+		// console.log(`solved Reactions ${time5 - time4} milliseconds`);
+		
 		let endTime = Date.now();
 		// console.log(`Total solve time = ${endTime - startTime} milliseconds`);
 	}
 	
-	deflectionCoordinates () { // TODO - need this? index.html calculates separately
-		return this.nodes.map (node => ({x: node.coord, y: node.yDOF.displacement}));
-	}
 	
-	minDeflection () {
-		let deflections = this.nodes.map (node => node.yDOF.displacement);
-		return Math.min(...deflections); 
-	}
+	// minDeflection () {
+		// let deflections = this.nodes.map (node => node.yDOF.displacement);
+		// return Math.min(...deflections); 
+	// }
 	
-	maxDeflection () {
-		let deflections = this.nodes.map (node => node.yDOF.displacement);
-		return Math.max(...deflections); 
-	}
+	// maxDeflection () {
+		// let deflections = this.nodes.map (node => node.yDOF.displacement);
+		// return Math.max(...deflections); 
+	// }
 	
 }

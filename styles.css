@@ -1,0 +1,26 @@
+
+body {
+	font-family: 'Lato', sans-serif ;
+	font-size: 0.95rem;
+}
+
+fieldset {
+	border: solid #dee2e6;
+	border-width: 1px;
+	border-radius: var(--bs-border-radius);
+	padding: 10px;
+}
+
+fieldset legend {
+	font-size: 1.25rem;
+}
+
+#canvas {
+	border: solid #dee2e6;
+	border-width: 1px;
+	border-radius: var(--bs-border-radius); 
+}
+
+.container-fluid {
+	width: 85%;
+}

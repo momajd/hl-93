@@ -1,9 +1,22 @@
 <html>
     <head>
-		<title> </title>
+		<title> HL-93 Solver </title>
 		
 		<script src="https://pagecdn.io/lib/mathjs/11.0.1/math.js" crossorigin="anonymous"  ></script>
+		
+		<!-- bootstrap -->
 		<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css" integrity="sha384-xeJqLiuOvjUBq3iGOjvSQSIlwrpqjSHXpduPd6rQpuiM3f5/ijby8pCsnbu5S81n" crossorigin="anonymous">
+		
+		<!-- google fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet">	
+		
+		<link rel="stylesheet" href="styles.css">
+		
 	</head>
     <body>
 		<script src="structure.js"></script>
@@ -15,290 +28,319 @@
 		<script src="nodalLoad.js"></script>
 		<script src="globalLoad.js"></script>
 		
-        <div>
+		<nav class="navbar bg-light">
+		  <div class="container-fluid">
+			<a class="navbar-brand">HL-93 Solver</a>
+			<a data-bs-toggle="modal" data-bs-target="#aboutModal" href="#"> About </a>
+		  </div>
+		</nav>
 		
+		<div class="container-fluid mt-3">
 			
-			<label> Number of Spans </label>
-			<input id="numSpans" type="number" min="1" max="5" value="1" onclick="updateNumberOfSpans()"></input>
-			
-			<div id="span1Div">
-				<label> Span 1 </label>
-				<input id="span1" type="number" min="0" value="100" oninput="updateSpanLengths()"></input>
+			<div class="row">
+				<div class="text-center">
+					<canvas id="canvas" width="" height="250"></canvas>
+					
+					
+					<div class="d-grid col-3 my-2 mx-auto">
+						<button type="button" class="btn btn-info btn-sm" onclick="run()" > Run Moving Load </button>
+					</div>
+				
+					<div class="btn-group" role="group">
+						<button type="button" class="btn btn-outline-dark btn-sm" onclick="stepBack()"> Step Back </button>
+						<button type="button" class="btn btn-outline-dark btn-sm" id="pauseButton" onclick="togglePause()"> Pause </button>
+						<button type="button" class="btn btn-outline-dark btn-sm" onclick="stepForward()"> Step Forward </button>
+					</div>
+				</div>
 			</div>
 			
-			<div id="span2Div" style="display:none">
-				<label> Span 2 </label>
-				<input id="span2" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
+			<div class="text-end">
+				<button type="button" onclick="resetLoadsCanvasAndCharts()"> Reset Structure </button>			
 			</div>
 			
-			<div id="span3Div" style="display:none">
-				<label> Span 3 </label>
-				<input id="span3" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
-			</div>
+			<div class="row">
 			
-			<div id="span4Div" style="display:none">
-				<label> Span 4 </label>
-				<input id="span4" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
-			</div>
+				<div class="col-6 px-5 py-2">
+					
+					<div class="accordion" >
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="panelsStayOpen-headingOne">
+						  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
+							Deflection Diagram
+						  </button>
+						</h2>
+						<div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-headingOne">
+						  <div class="accordion-body">
+							<canvas id="deflectionChart" ></canvas>
+						  </div>
+						</div>
+					  </div>
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="panelsStayOpen-headingTwo">
+						  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+							Moment Diagram
+						  </button>
+						</h2>
+						<div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-headingTwo">
+						  <div class="accordion-body">
+							<canvas id="momentChart" ></canvas>
+						  </div>
+						</div>
+					  </div>
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="panelsStayOpen-headingThree">
+						  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false" aria-controls="panelsStayOpen-collapseThree">
+							Shear Diagram
+						  </button>
+						</h2>
+						<div id="panelsStayOpen-collapseThree" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-headingThree">
+						  <div class="accordion-body">
+							<canvas id="shearChart" ></canvas>
+						  </div>
+						</div>
+					  </div>
+					</div>
+					
+				</div>
 			
-			<div id="span5Div" style="display:none">
-				<label> Span 5 </label>
-				<input id="span5" type="number" min="0" value="0" oninput="updateSpanLengths()"></input>
+				
+				<div class="col px-5 py-2">
+				
+					<div class="accordion" >
+					
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="panelsStayOpen2-headingOne">
+						  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen2-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen2-collapseOne">
+							Structure Info
+						  </button>
+						</h2>
+						<div id="panelsStayOpen2-collapseOne" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen2-headingOne">
+						  <div class="accordion-body">
+							<strong>Span Info:</strong>
+						
+							<div class="mb-4">
+								<label> Number of Spans </label>
+								<input id="numSpans" type="number" min="1" max="5" value="3" onclick="updateNumberOfSpans()"></input>
+								
+								<div class="mt-2 ms-3" id="span1Div">
+									<label> Span 1 </label>
+									<input id="span1" type="number" min="0" max="500" value="100" oninput="updateSpanLengthsAndStiffness()"></input>
+									<span>ft</span>
+								</div>
+								
+								<div class="mt-2 ms-3" id="span2Div">
+									<label> Span 2 </label>
+									<input id="span2" type="number" min="0" max="500" value="100" oninput="updateSpanLengthsAndStiffness()"></input>
+									<span>ft</span>
+								</div>
+								
+								<div class="mt-2 ms-3" id="span3Div" style=>
+									<label> Span 3 </label>
+									<input id="span3" type="number" min="0" max="500" value="100" oninput="updateSpanLengthsAndStiffness()"></input>
+									<span>ft</span>
+								</div>
+								
+								<div class="mt-2 ms-3" id="span4Div" style="display:none">
+									<label> Span 4 </label>
+									<input id="span4" type="number" min="0" max="500" value="100" oninput="updateSpanLengthsAndStiffness()"></input>
+									<span>ft</span>
+								</div>
+								
+								<div class="mt-2 ms-3" id="span5Div" style="display:none">
+									<label> Span 5 </label>
+									<input id="span5" type="number" min="0" max="500" value="100" oninput="updateSpanLengthsAndStiffness()"></input>
+									<span>ft</span>
+								</div>
+							
+							</div>
+							
+							<strong> Stiffness Info: </strong>
+							<div>
+								<label> E * M.O.I. = </label>
+								<input id="stiffnessInput" type="number" min="1" max="1000000" value="10000" oninput="updateSpanLengthsAndStiffness()"  ></input>
+								<span> kip * ft<sup>2</sup> </span>	
+								<i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="right" 
+									data-bs-title="This value is the product of the Elastic Modulus and Moment of Inertia of the section"></i>
+							</div>
+							
+						  </div>
+						</div>
+					  </div>
+					  
+					  
+					  <div class="accordion-item">
+						<h2 class="accordion-header" id="panelsStayOpen2-headingTwo">
+						  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen2-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen2-collapseTwo">
+							Moving Loads
+						  </button>
+						</h2>
+						<div id="panelsStayOpen2-collapseTwo" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen2-headingTwo">
+						  <div class="accordion-body">
+							<div class="mb-4">
+								<label> Step Distance </label>
+								<input id="stepDistance" type="number" min="1" max="20" value="4" oninput="updateStepDistance()"  ></input>
+								<span>ft</span> 
+								<i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="right" 
+									data-bs-title="This is the distance that the moving loads will move after each iteration"></i>
+							</div>
+							
+						
+							<ul class="nav nav-tabs mb-4" id="movingLoadTab" role="tablist">
+							  <li class="nav-item" role="presentation" onclick="createHl93TruckLoad()" >
+								<button class="nav-link active" id="hl93-truck-tab" data-bs-toggle="tab" data-bs-target="#hl93-truck-tab-pane" type="button" role="tab">HL-93 Truck</button>
+							  </li>
+							  <li class="nav-item" role="presentation" onclick="createHl93TandemLoad()">
+								<button class="nav-link" id="hl93-tandem-tab" data-bs-toggle="tab" data-bs-target="#hl93-tandem-tab-pane" type="button" role="tab">HL-93 Tandem</button>
+							  </li>
+							  <li class="nav-item" role="presentation" onclick="createDualTrucks()">
+								<button class="nav-link" id="dual-truck-tab" data-bs-toggle="tab" data-bs-target="#dual-truck-tab-pane" type="button" role="tab">Dual Truck</button>
+							  </li>
+							  <li class="nav-item" role="presentation" onclick="createConcentratedLoad()">
+								<button class="nav-link" id="con-load-tab" data-bs-toggle="tab" data-bs-target="#con-load-tab-pane" type="button" role="tab">Concentrated Load</button>
+							  </li>
+							</ul>
+							
+							<div class="tab-content" id="movingLoadContent">
+							  
+								<div class="tab-pane fade show active" id="hl93-truck-tab-pane" role="tabpanel" tabindex="0">
+									<h6>Rear Axle Spacing</h6>
+									<div class="form-check" onclick="createHl93TruckLoad()">
+										<input class="form-check-input" type="radio" name="hl93RearAxleSpacing" id="hl93RearAxleSpacing14" checked>
+										<label class="form-check-label" for="hl93RearAxleSpacing14"> Fixed at 14 ft </label>
+									</div>
+									<div class="form-check" onclick="createHl93TruckLoad()">
+										<input class="form-check-input" type="radio" name="hl93RearAxleSpacing" id="hl93RearAxleSpacing30">
+										<label class="form-check-label" for="hl93RearAxleSpacing30"> Fixed at 30 ft </label>
+									</div>
+									<div class="form-check" onclick="createHl93TruckLoad()">
+										<input class="form-check-input" type="radio" name="hl93RearAxleSpacing" id="hl93RearAxleSpacing4">
+										<label class="form-check-label" for="hl93RearAxleSpacing4"> Vary at 4 ft increments </label>
+									</div>
+									<div class="form-check" onclick="createHl93TruckLoad()">
+										<input class="form-check-input" type="radio" name="hl93RearAxleSpacing" id="hl93RearAxleSpacing8">
+										<label class="form-check-label" for="hl93RearAxleSpacing8"> Vary at 8 ft increments </label>
+									</div>
+									<div class="form-check" onclick="createHl93TruckLoad()">
+										<input class="form-check-input" type="radio" name="hl93RearAxleSpacing" id="hl93RearAxleSpacing16">
+										<label class="form-check-label" for="hl93RearAxleSpacing16"> Vary at 16 ft increments </label>
+									</div>
+									
+								</div>
+							  
+								<div class="tab-pane fade" id="hl93-tandem-tab-pane" role="tabpanel" tabindex="0">
+									<div class="mt-4 text-center">
+										<span> No options available </span>
+									</div>
+								</div>
+								
+								<div class="tab-pane fade" id="dual-truck-tab-pane" role="tabpanel" tabindex="0">
+									<div class="text-center mb-3">
+										<label> Factor Loads By</label>
+										<input id="dualTruckFactorInput" type="number" min="0" max="1" value="0.9" step="0.1" oninput="createDualTrucks()" ></input>
+									</div>
+									
+									<div class="text-center mb-3">
+										<label> Spacing Between Trucks</label>
+										<input id="dualTruckSpacing1Input" type="number" min="0"  max="100" value="50" oninput="changeDualTruckSpacing()" ></input>
+										<span> ft </span>
+									</div>
+
+								</div>
+								
+								<div class="tab-pane fade" id="con-load-tab-pane" role="tabpanel" tabindex="0">
+									<div class="text-center mb-3">
+										<label> Load </label>
+										<input id="concentratedLoadInput" type="number" min="0" max="1000" value="1" oninput="createConcentratedLoad()" ></input>
+										<span>kips</span>
+									</div>
+								</div>
+								
+							</div>
+							
+						  </div>
+						</div>
+					  </div>
+				
+					</div>
+					
+				</div>
+				
 			</div>
 			
 		</div>
 		
-		<div>
-			<button onclick="runHL93()"> run HL93 </button>
+		<!-- Modal -->
+		<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+		  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<h1 class="modal-title fs-5" id="aboutModalLabel">About</h1>
+			  </div>
+			  <div class="modal-body">
+				
+				
+				HL-93 Solver is an open-source program created for educational purposes. This program is not intended for commercial use. 
+				<br><br>
+				
+				Created by <a href="https://www.linkedin.com/in/momajd/"> Mohammad Majd</a>, and not affiliated with any employer or organization. 
+				<a href="mailto:mo.a.majd@gmail.com">Contact me</a> with any questions, comments, or suggestions to improve this program. 
+				<br><br>
+				
+				I plan on adding more info to sections below, but here is what I have so far: 
+				<br><br>
+				
+				<h5> Background </h5>
+				The HL-93 is a live load model given in the American Association of State Highway and Transportation (AASHTO) LRFD Bridge Design Specifications. 
+				It's a notional load, which is not intended to represent any particular truck, but is meant to envelope any legal load permitted on highways. 
+				<br><br>
+				
+				<h5> How this program works </h5>
+				The program splits each span of the multi-span structure into 10 members, and develops a global stiffness matrix for the entire structure.  Based on that stiffness matrix, the program can calculate deflections, moments, shears, and support reactions. 
+				<br><br>
+				
+				The program is written in javascript, which provides a helpful math library with operations for matrices. The code is heavily object-oriented, and utilizes classes for nodes, members, degrees-of-freedom, etc.
+				
+				<br><br>
+				
+				<h5> Program Assumptions </h5>
+				According to AASHTO, axles that do not contribute to extreme force effects are to be neglected. This program does not have a feature 
+				to account for this. Most commercial programs develop influence lines at every analysis point along a structure to determine which axles 
+				contribute to the maximum/minimum force effects. 
+				<br><br>
+				
+				<h5> Future Features (maybe) </h5>
+				<ul>
+					<li> HL-93 Lane Load and pattern loading </li>
+					<li> User-defined vehicle </li>
+					<li> Right now only 1 constant stiffness value(E * MOI) can be used for the entire structure. A possible future feature would be to allow the user to define different stiffness along the length of the structure.  </li>
+					<li> Show enveloped results in a table  </li>
+				</ul>
+				
+			  </div>
+			
+			</div>
+		  </div>
 		</div>
 		
-		<div>
-			
-			<canvas id="canvas" width="1000" height="400"></canvas>
-			<canvas id="deflectionChart" ></canvas>
-			<canvas id="momentChart" ></canvas>
-			<canvas id="shearChart" ></canvas>
-			
-        </div>
 		
+
+		<script src="utils.js"></script>
 		
 		<script>
-		
-		
-			<!-- Initial Structure -->
-			let structure = new Structure();
-			structure.constructStructureFromSpans([100]);
-			
-			let load = new GlobalLoad(50, -1);
-			structure.addGlobalLoad(load);
-				
-			structure.solve();
-			
-			let canvas = document.getElementById("canvas");
-			let context = canvas.getContext("2d"); 
-			context.translate(25, 80);
-			
-			let structureView = new StructureView(context, structure);
-			
-			
-			
-			<!-- UI Functions -->
-			
-			function updateNumberOfSpans() {
-				let numSpans = parseInt(document.getElementById("numSpans").value);
-				if (structureView.spanCounter === 5 && numSpans === 5) {alert("Max number of spans allowed is 5")};
-				structureView.spanCounter = numSpans;
-				
-				for (let i = 1; i <= 5; i++) {
-					let element = document.getElementById(`span${i}Div`);
-					
-					if (i <= numSpans) {
-						element.style.display = "block";
-					} else {
-						document.getElementById(`span${i}`).value = 0;
-						element.style.display = "none";
-					}
-				}
-				
-				updateSpanLengths();
-			}
-			
-			function updateSpanLengths() {
-				let spanArray = [];
-				
-				for (let i = 1; i <= 5; i++) {
-					let spanLength = parseInt(document.getElementById(`span${i}`).value);
-					if (spanLength > 0) { spanArray.push(spanLength) };
-				}
-				
-				structure.constructStructureFromSpans(spanArray);
-				structureView.redraw();
-				// TODO - update charts
-			}
+			<!-- Bootstrap javascript -->
+			<!-- https://getbootstrap.com/docs/5.2/components/navs-tabs/#javascript-behavior -->
+			const triggerTabList = document.querySelectorAll('#movingLoadTab button')
+			triggerTabList.forEach(triggerEl => {
+			  const tabTrigger = new bootstrap.Tab(triggerEl)
 
+			  triggerEl.addEventListener('click', event => {
+				event.preventDefault()
+				tabTrigger.show()
+			  })
+			})
 			
-			
-			
-			
-			
-			<!-- Initial Charts Coords.. all will be 0 -->
-			
-			let momentCoordinates = [];
-			let shearCoordinates = [];
-			let deflectionCoordinates = [];
-			structure.members.forEach( (member, idx) => {
-				momentCoordinates.push({x: member.nearNode.coord, y: -1 * member.beginMoment});
-				momentCoordinates.push({x: member.farNode.coord, y: member.endMoment});
-				shearCoordinates.push({x: member.nearNode.coord, y: member.beginShear});
-				shearCoordinates.push({x: member.farNode.coord, y: -1 * member.endShear});
-				deflectionCoordinates.push({x: member.nearNode.coord, y: member.nearNode.yDOF.displacement});
-				deflectionCoordinates.push({x: member.farNode.coord, y: member.farNode.yDOF.displacement});
-			});
-			
-			let yMinDeflection = -1;  // variables used later on for chart updating
-			let yMaxDeflection = 1;
-			let yMinMoment = -1;
-			let yMaxMoment = 1;
-			let yMinShear = -1;
-			let yMaxShear = 1;
-			
-			<!-- Deflection Chart -->
-			
-			const deflectionData = {
-				datasets: [{
-					label: 'Deflection',
-					data: deflectionCoordinates, 
-					backgroundColor: 'rgb(255,99, 132)',
-					showLine: true
-				}]
-			};
-			
-			const deflectionConfig = {
-				type: 'scatter',
-				data: deflectionData,
-				options: {
-					scales: {
-						x: {type: 'linear', position: 'bottom'}
-					},
-					animation: false
-				}
-			};
-			
-			const deflectionChart = new Chart(
-				document.getElementById('deflectionChart'),
-				deflectionConfig
-			);
-			
-			<!-- Moment Chart -->
-			
-			const momentData = {
-				datasets: [{
-					label: 'Moment',
-					data: momentCoordinates, 
-					backgroundColor: 'rgb(0, 206, 209)',
-					showLine: true
-				}]
-			};
-			
-			const momentConfig = {
-				type: 'scatter',
-				data: momentData,
-				options: {
-					scales: {
-						x: {type: 'linear', position: 'bottom'}
-					},
-					animation: false
-				}
-			};
-			
-			const momentChart = new Chart(
-				document.getElementById('momentChart'),
-				momentConfig
-			);
-			
-			
-			<!-- Shear Chart -->
-			
-			const shearData = {
-				datasets: [{
-					label: 'Shear',
-					data: shearCoordinates, 
-					backgroundColor: 'rgb(255,99, 132)',
-					showLine: true
-				}]
-			};
-			
-			const shearConfig = {
-				type: 'scatter',
-				data: shearData,
-				options: {
-					scales: {
-						x: {type: 'linear', position: 'bottom'}
-					},
-					animation: false
-				}
-			};
-			
-			const shearChart = new Chart(
-				document.getElementById('shearChart'),
-				shearConfig
-			);
-			
-			<!-- Chart Functions -->
-			
-			function updateCharts() {
-				
-				let coord_array_idx = 0;
-				structure.members.forEach (member => {
-					deflectionCoordinates[coord_array_idx] = {x: member.nearNode.coord, y: member.nearNode.yDOF.displacement};
-					deflectionCoordinates[coord_array_idx + 1] = {x: member.farNode.coord, y: member.farNode.yDOF.displacement};
-					if (member.farNode.yDOF.displacement < yMinDeflection) {yMinDeflection = member.farNode.yDOF.displacement};
-					if (member.farNode.yDOF.displacement > yMaxDeflection) {yMaxDeflection = member.farNode.yDOF.displacement};
-					deflectionChart.options.scales.y = {min: yMinDeflection, max: yMaxDeflection};
-					
-					momentCoordinates[coord_array_idx] = {x: member.nearNode.coord, y: -1 * member.beginMoment};
-					momentCoordinates[coord_array_idx + 1] = {x: member.farNode.coord, y: member.endMoment};
-					if (member.endMoment > yMaxMoment) {yMaxMoment = member.endMoment};
-					if (member.endMoment < yMinMoment) {yMinMoment = member.endMoment};
-					momentChart.options.scales.y = {min: yMinMoment, max: yMaxMoment};
-					
-					shearCoordinates[coord_array_idx] = {x: member.nearNode.coord, y: -1 * member.beginShear};
-					shearCoordinates[coord_array_idx + 1] = {x: member.farNode.coord, y: member.endShear};
-					if (member.endShear > yMaxShear) {yMaxShear = member.endShear;}
-					if (member.endShear < yMinShear) {yMinShear = member.endShear;}
-					shearChart.options.scales.y = {min: yMinShear, max: yMaxShear};
-					
-					coord_array_idx += 2;
-				});
-				
-				deflectionChart.update();
-				momentChart.update();
-				shearChart.update();
-			}
-			
-			function resetCharts() {
-				//TODO
-			}
-			
-			
-			<!-- Moving Loads -->
-			
-			function runHL93() {
-				structure.removeAllLoads();
-				
-				let axle1 = new GlobalLoad(0, -8);
-				let axle2 = new GlobalLoad(-14, -32);
-				let axle3 = new GlobalLoad(-28, -32);
-				[axle1, axle2, axle3].forEach(axle => structure.addGlobalLoad(axle));
-				
-				let stepDistance = 2;
-				let rearAxleInterval = 8;  // can be adjusted but 4 is a good interval for the rear spacing
-				
-				let hl93Interval = setInterval(function () {
-					
-					if (axle2.coord - axle3.coord < 30 && axle3.coord > 0) {
-						axle3.setCoord(axle3.coord - rearAxleInterval);
-					} else {
-						axle3.setCoord(axle2.coord - 14);
-						structure.stepLoads(stepDistance);
-					}
-					
-					structure.solve();
-					structureView.redraw();
-					updateCharts();
-					
-					if (axle3.coord > structure.length) {stopHL93Interval()};
-					
-				},100);
-				
-				function stopHL93Interval() {
-					clearInterval(hl93Interval);
-				}
-			}
-			
-			
-			
-			
+			const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+			const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 		</script>
     </body>
 </html>

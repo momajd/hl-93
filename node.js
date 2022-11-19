@@ -3,6 +3,8 @@ class Node {
 		this.coord = coord; 
 		this.yDOF = new DegreeOfFreedom(this, "y");
 		this.zDOF = new DegreeOfFreedom(this, "z");
+		this.backMember = undefined;
+		this.aheadMember = undefined;
 	}
 	
 	addSupport() {
