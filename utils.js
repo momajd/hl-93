@@ -1,6 +1,6 @@
 // <!-- Initial Structure -->
 const structure = new Structure();
-structure.constructStructureFromSpans([100, 100, 100], 10000);  //initial span lengths and stiffness.. should match html
+structure.constructStructureFromSpans([100, 100, 100], 500000);  //initial span lengths and stiffness (EI value).. should match html
 	
 structure.solve();  //results will be 0 but this is so the moment and shear charts have coordinates
 
